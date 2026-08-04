@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEON BREAKER | 벽돌깨기</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --ink: #14213d;
+      --blue: #2a66f5;
+      --cream: #fffdf5;
+      --orange: #ff7448;
+      --yellow: #ffc933;
+      --mint: #4ee2c5;
+      --line: 3px solid var(--ink);
+      --shadow: 5px 5px 0 var(--ink);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 11% 18%, #ffc933 0 4px, transparent 4.5px),
+        radial-gradient(circle at 81% 14%, #4ee2c5 0 7px, transparent 7.5px),
+        radial-gradient(circle at 92% 67%, #ff7448 0 5px, transparent 5.5px),
+        #f3f0e6;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+    }
+    body::before, body::after {
+      position: fixed;
+      z-index: -1;
+      content: '';
+      opacity: .9;
+      pointer-events: none;
+    }
+    body::before { width: 130px; height: 130px; top: 54px; left: -60px; background: var(--orange); transform: rotate(22deg); }
+    body::after { width: 210px; height: 42px; right: -64px; bottom: 58px; background: var(--blue); transform: rotate(-34deg); }
+
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 38px; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 23px; }
+    .eyebrow, .label { margin: 0; font: 500 11px/1 'DM Mono', monospace; letter-spacing: .1em; }
+    h1 { margin: 7px 0 0; font: 400 clamp(34px, 6vw, 67px)/.92 'Black Han Sans', sans-serif; letter-spacing: -.04em; }
+    h1 span { color: var(--blue); }
+    .header-badge {
+      display: flex; align-items: center; gap: 9px; flex: 0 0 auto;
+      padding: 10px 13px; border: var(--line); background: var(--mint); box-shadow: 4px 4px 0 var(--ink);
+      font: 500 11px/1 'DM Mono', monospace;
+    }
+    .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px #fff6; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 228px; gap: 21px; align-items: start; }
+    .game-frame { position: relative; border: var(--line); background: var(--ink); box-shadow: 8px 8px 0 var(--ink); overflow: hidden; }
+    canvas { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; cursor: crosshair; }
+    .game-topbar { position: absolute; z-index: 2; top: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; }
+    .stage-chip { padding: 7px 9px; border: 2px solid var(--ink); background: var(--yellow); font: 500 11px/1 'DM Mono', monospace; box-shadow: 2px 2px 0 #fff; }
+    .control-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; border-top: var(--line); background: var(--ink); }
+    button { appearance: none; cursor: pointer; color: var(--ink); font: 700 13px/1 'Space Grotesk', sans-serif; border: 0; transition: transform .12s, background .12s; }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: -6px; }
+    .control-bar button { min-height: 48px; background: var(--cream); }
+    .control-bar button:hover { background: var(--yellow); }
+    .control-bar button:active, .round-button:active { transform: translate(2px, 2px); }
+    #soundButton[aria-pressed="false"] { background: #d8d8d1; text-decoration: line-through; }
+
+    .side { display: grid; gap: 15px; }
+    .panel { border: var(--line); background: var(--cream); box-shadow: var(--shadow); }
+    .score-panel { padding: 14px 15px 13px; background: var(--blue); color: white; }
+    .score-line { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 2px solid #ffffff55; }
+    .score-line:last-child { border: 0; padding-bottom: 0; }
+    .score-line b { font: 500 21px/1 'DM Mono', monospace; }
+    .lives { letter-spacing: 2px; color: var(--yellow); font-size: 20px; }
+    .howto { padding: 16px 16px 18px; }
+    .howto h2 { margin: 0 0 13px; font: 700 15px/1 'Space Grotesk', sans-serif; }
+    .howto p { margin: 10px 0 0; font-size: 12px; line-height: 1.38; }
+    .keys { display: flex; gap: 6px; }
+    kbd { min-width: 33px; padding: 6px 5px; border: 2px solid var(--ink); background: var(--yellow); text-align: center; font: 500 11px/1 'DM Mono', monospace; box-shadow: 2px 2px 0 var(--ink); }
+    .record { padding: 13px 15px; background: var(--mint); }
+    .record .value { display: block; margin-top: 7px; font: 500 25px/1 'DM Mono', monospace; }
+
+    .overlay { position: absolute; inset: 0; z-index: 3; display: flex; place-content: center; align-items: center; padding: 20px; background: #14213ddd; }
+    .overlay[hidden] { display: none; }
+    .message { width: min(380px, 100%); padding: 23px; text-align: center; border: var(--line); background: var(--cream); box-shadow: 7px 7px 0 var(--orange); }
+    .message .tag { display: inline-block; margin-bottom: 9px; padding: 5px 7px; background: var(--mint); border: 2px solid var(--ink); font: 500 10px/1 'DM Mono', monospace; }
+    .message h2 { margin: 0; font: 400 clamp(28px, 5vw, 42px)/1 'Black Han Sans', sans-serif; letter-spacing: -.04em; }
+    .message p { margin: 11px 0 19px; font-size: 13px; line-height: 1.45; }
+    .round-button { padding: 13px 19px; border: var(--line); background: var(--orange); box-shadow: 4px 4px 0 var(--ink); }
+    .round-button:hover { background: var(--yellow); }
+
+    footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 25px; font: 500 10px/1.4 'DM Mono', monospace; }
+    footer span:last-child { text-align: right; }
+    @media (max-width: 760px) {
+      .page { width: min(100% - 24px, 620px); padding-top: 18px; }
+      header { margin-bottom: 17px; }
+      .header-badge { display: none; }
+      .layout { grid-template-columns: 1fr; gap: 17px; }
+      .side { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .score-panel { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .score-line { display: block; padding: 0; border: 0; }
+      .score-line b { display: block; margin-top: 5px; }
+      .howto { display: none; }
+    }
+    @media (max-width: 410px) { .side { grid-template-columns: 1fr; } .score-panel { grid-template-columns: repeat(3, 1fr); } footer { display: block; } footer span:last-child { display: block; margin-top: 6px; text-align: left; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <p class="eyebrow">ARCADE // 2026</p>
+        <h1>네온 <span>벽돌</span>깨기</h1>
+      </div>
+      <div class="header-badge"><i class="pulse"></i> READY TO PLAY</div>
+    </header>
+
+    <section class="layout" aria-label="벽돌깨기 게임">
+      <div class="game-frame">
+        <div class="game-topbar"><span class="stage-chip" id="stageChip">STAGE 01</span><span class="stage-chip" id="bricksChip">25 BLOCKS</span></div>
+        <canvas id="game" aria-label="벽돌깨기 게임 화면"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="message">
+            <span class="tag" id="overlayTag">NEON BREAKER</span>
+            <h2 id="overlayTitle">준비됐나요?</h2>
+            <p id="overlayText">공을 튕겨 모든 벽돌을 부수세요.<br>키보드와 마우스, 터치 모두 지원합니다.</p>
+            <button class="round-button" id="startButton">게임 시작 →</button>
+          </div>
+        </div>
+        <div class="control-bar">
+          <button id="pauseButton" type="button">Ⅱ 일시정지</button>
+          <button id="soundButton" type="button" aria-pressed="true">♬ 사운드 켜짐</button>
+        </div>
+      </div>
+
+      <aside class="side">
+        <section class="panel score-panel" aria-label="게임 정보">
+          <div class="score-line"><span class="label">SCORE</span><b id="score">00000</b></div>
+          <div class="score-line"><span class="label">LIVES</span><b class="lives" id="lives">● ● ●</b></div>
+          <div class="score-line"><span class="label">LEVEL</span><b id="level">01</b></div>
+        </section>
+        <section class="panel howto">
+          <h2>HOW TO PLAY</h2>
+          <div class="keys"><kbd>←</kbd><kbd>→</kbd><kbd>SPACE</kbd></div>
+          <p>화살표 키나 마우스로 패들을 움직이세요. 스페이스바로 공을 발사합니다.</p>
+        </section>
+        <section class="panel record"><span class="label">BEST SCORE</span><strong class="value" id="bestScore">00000</strong></section>
+      </aside>
+    </section>
+    <footer><span>DESIGNED FOR QUICK REACTIONS</span><span>MOVE · BREAK · REPEAT</span></footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const W = 960, H = 540;
+      const ui = {
+        score: document.getElementById('score'), lives: document.getElementById('lives'), level: document.getElementById('level'),
+        best: document.getElementById('bestScore'), stage: document.getElementById('stageChip'), bricks: document.getElementById('bricksChip'),
+        overlay: document.getElementById('overlay'), tag: document.getElementById('overlayTag'), title: document.getElementById('overlayTitle'), text: document.getElementById('overlayText'),
+        start: document.getElementById('startButton'), pause: document.getElementById('pauseButton'), sound: document.getElementById('soundButton')
+      };
+      const colors = ['#ff7448', '#ffc933', '#4ee2c5', '#6993ff', '#f985c5'];
+      let audio, muted = false, state = 'intro', score = 0, lives = 3, level = 1, best = +localStorage.getItem('neonBreakerBest') || 0;
+      let lastTime = 0, keys = {}, paddle, ball, bricks = [], particles = [], nextLaunch = 0;
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+      }
+      addEventListener('resize', resize); resize();
+
+      function setupStage() {
+        paddle = { x: W / 2 - 71, y: H - 42, w: 142, h: 15, target: W / 2 };
+        ball = { x: W / 2, y: H - 59, r: 9, vx: 0, vy: 0, stuck: true };
+        particles = [];
+        const rows = Math.min(4 + level, 7), columns = 7, gap = 10, bw = 107, bh = 25, startX = (W - (columns * bw + (columns - 1) * gap)) / 2;
+        bricks = [];
+        for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+          const strong = level > 2 && (row + col + level) % 6 === 0;
+          bricks.push({ x: startX + col * (bw + gap), y: 76 + row * (bh + gap), w: bw, h: bh, color: colors[(row + level) % colors.length], hp: strong ? 2 : 1, maxHp: strong ? 2 : 1, alive: true });
+        }
+        updateUI();
+      }
+      function updateUI() {
+        ui.score.textContent = String(score).padStart(5, '0');
+        ui.lives.textContent = Array.from({ length: 3 }, (_, i) => i < lives ? '●' : '○').join(' ');
+        ui.level.textContent = String(level).padStart(2, '0'); ui.best.textContent = String(best).padStart(5, '0');
+        ui.stage.textContent = `STAGE ${String(level).padStart(2, '0')}`;
+        ui.bricks.textContent = `${bricks.filter(b => b.alive).length} BLOCKS`;
+      }
+      function launch() {
+        if (!ball.stuck || state !== 'playing') return;
+        ball.stuck = false; ball.vx = (Math.random() > .5 ? 1 : -1) * (4.2 + level * .18); ball.vy = -(5.2 + level * .22); sound('launch');
+      }
+      function startGame() { score = 0; lives = 3; level = 1; setupStage(); state = 'playing'; ui.overlay.hidden = true; lastTime = performance.now(); }
+      function pauseGame() {
+        if (state === 'playing') { state = 'paused'; showOverlay('PAUSED', '잠깐 쉬어가기', '준비되면 다시 게임을 이어가세요.', '계속하기 →'); ui.pause.textContent = '▶ 계속하기'; }
+        else if (state === 'paused') resumeGame();
+      }
+      function resumeGame() { state = 'playing'; ui.overlay.hidden = true; ui.pause.textContent = 'Ⅱ 일시정지'; lastTime = performance.now(); }
+      function showOverlay(tag, title, text, button) { ui.tag.textContent = tag; ui.title.textContent = title; ui.text.innerHTML = text; ui.start.textContent = button; ui.overlay.hidden = false; }
+      function endGame() { state = 'over'; sound('lose'); showOverlay('GAME OVER', '다시 한 번!', `최종 점수 <b>${score.toLocaleString()}</b>점<br>다음 판에는 더 멀리 갈 수 있어요.`, '다시 도전 →'); }
+      function nextStage() { level++; state = 'between'; sound('win'); showOverlay('STAGE CLEAR!', `${String(level - 1).padStart(2, '0')} 스테이지 클리어`, `다음은 <b>STAGE ${String(level).padStart(2, '0')}</b>입니다.<br>벽돌이 더 단단해집니다!`, '다음 스테이지 →'); }
+      function continueFromOverlay() { if (state === 'intro' || state === 'over') startGame(); else if (state === 'paused') resumeGame(); else if (state === 'between') { setupStage(); state = 'playing'; ui.overlay.hidden = true; lastTime = performance.now(); } }
+
+      function sound(kind) {
+        if (muted) return;
+        try {
+          audio ||= new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audio.createOscillator(), gain = audio.createGain();
+          const notes = { launch: [280, .07, 'square'], paddle: [190, .04, 'square'], hit: [490, .045, 'triangle'], break: [730, .08, 'square'], lose: [130, .18, 'sawtooth'], win: [660, .16, 'triangle'] };
+          const [freq, duration, type] = notes[kind]; osc.type = type; osc.frequency.setValueAtTime(freq, audio.currentTime); if (kind === 'win') osc.frequency.exponentialRampToValueAtTime(980, audio.currentTime + duration);
+          gain.gain.setValueAtTime(.05, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration); osc.connect(gain).connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration);
+        } catch (_) { /* sound is optional */ }
+      }
+      function addParticles(x, y, color) { for (let i = 0; i < 12; i++) { const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 3.5; particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 1, color }); } }
+      function hitBrick(brick) {
+        brick.hp--; ball.vy *= -1;
+        if (brick.hp === 0) { brick.alive = false; score += 100 * level; addParticles(ball.x, ball.y, brick.color); sound('break'); }
+        else { score += 30 * level; sound('hit'); }
+        if (score > best) { best = score; localStorage.setItem('neonBreakerBest', best); }
+        updateUI(); if (!bricks.some(b => b.alive)) nextStage();
+      }
+      function update(dt) {
+        const paddleSpeed = 10.5 * dt;
+        if (keys.ArrowLeft || keys.a) paddle.target -= 13 * dt;
+        if (keys.ArrowRight || keys.d) paddle.target += 13 * dt;
+        paddle.target = Math.max(paddle.w / 2 + 10, Math.min(W - paddle.w / 2 - 10, paddle.target));
+        paddle.x += ((paddle.target - paddle.w / 2) - paddle.x) * Math.min(1, paddleSpeed);
+        if (ball.stuck) { ball.x = paddle.x + paddle.w / 2; ball.y = paddle.y - ball.r - 2; }
+        else {
+          ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+          if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); sound('paddle'); }
+          if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.vx = -Math.abs(ball.vx); sound('paddle'); }
+          if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); sound('paddle'); }
+          if (ball.vy > 0 && ball.y + ball.r >= paddle.y && ball.y - ball.r <= paddle.y + paddle.h && ball.x >= paddle.x - ball.r && ball.x <= paddle.x + paddle.w + ball.r) {
+            ball.y = paddle.y - ball.r; const impact = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2); const speed = Math.min(9.8, Math.hypot(ball.vx, ball.vy) + .08);
+            ball.vx = speed * impact * 1.15; ball.vy = -Math.sqrt(Math.max(14, speed * speed - ball.vx * ball.vx)); sound('paddle');
+          }
+          for (const brick of bricks) if (brick.alive && ball.x + ball.r > brick.x && ball.x - ball.r < brick.x + brick.w && ball.y + ball.r > brick.y && ball.y - ball.r < brick.y + brick.h) { hitBrick(brick); break; }
+          if (ball.y - ball.r > H) {
+            lives--; updateUI();
+            if (!lives) endGame(); else { ball.stuck = true; ball.vx = ball.vy = 0; nextLaunch = performance.now() + 450; sound('lose'); }
+          }
+        }
+        for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .09 * dt; p.life -= .035 * dt; }
+        particles = particles.filter(p => p.life > 0);
+        if (ball.stuck && nextLaunch && performance.now() > nextLaunch) { nextLaunch = 0; launch(); }
+      }
+      function roundedRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#14213d'; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = '#ffffff12'; ctx.lineWidth = 1;
+        for (let x = 20; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (let y = 20; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+        ctx.fillStyle = '#ffffff10'; ctx.font = '500 11px DM Mono, monospace'; ctx.fillText('BREAK THE PATTERN', 22, H - 17);
+        for (const b of bricks) if (b.alive) {
+          ctx.save(); ctx.shadowColor = b.color; ctx.shadowBlur = 9; roundedRect(b.x, b.y, b.w, b.h, 4); ctx.fillStyle = b.color; ctx.fill(); ctx.restore();
+          if (b.hp > 1) { ctx.strokeStyle = '#14213d'; ctx.lineWidth = 2; roundedRect(b.x + 4, b.y + 4, b.w - 8, b.h - 8, 2); ctx.stroke(); }
+          ctx.fillStyle = '#ffffff80'; ctx.fillRect(b.x + 7, b.y + 5, b.w - 14, 2);
+        }
+        for (const p of particles) { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); } ctx.globalAlpha = 1;
+        ctx.save(); ctx.shadowColor = '#4ee2c5'; ctx.shadowBlur = 15; roundedRect(paddle.x, paddle.y, paddle.w, paddle.h, 7); ctx.fillStyle = '#4ee2c5'; ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#14213d'; ctx.fillRect(paddle.x + 15, paddle.y + 5, paddle.w - 30, 3);
+        ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = '#fffdf5'; ctx.fill(); ctx.restore();
+      }
+      function loop(time) {
+        const dt = Math.min(2.2, (time - lastTime) / 16.666 || 1); lastTime = time;
+        if (state === 'playing') update(dt); draw(); requestAnimationFrame(loop);
+      }
+      function pointerMove(event) { const rect = canvas.getBoundingClientRect(); paddle.target = ((event.clientX - rect.left) / rect.width) * W; }
+      canvas.addEventListener('pointermove', pointerMove); canvas.addEventListener('pointerdown', () => { if (state === 'playing') launch(); });
+      addEventListener('keydown', e => { if (['ArrowLeft','ArrowRight',' ','a','A','d','D'].includes(e.key)) e.preventDefault(); keys[e.key === 'A' ? 'a' : e.key === 'D' ? 'd' : e.key] = true; if (e.code === 'Space') launch(); if (e.key === 'Escape') pauseGame(); });
+      addEventListener('keyup', e => { keys[e.key === 'A' ? 'a' : e.key === 'D' ? 'd' : e.key] = false; });
+      ui.start.addEventListener('click', continueFromOverlay); ui.pause.addEventListener('click', pauseGame);
+      ui.sound.addEventListener('click', () => { muted = !muted; ui.sound.setAttribute('aria-pressed', String(!muted)); ui.sound.textContent = muted ? '♬ 사운드 꺼짐' : '♬ 사운드 켜짐'; if (!muted) sound('hit'); });
+      setupStage(); requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
